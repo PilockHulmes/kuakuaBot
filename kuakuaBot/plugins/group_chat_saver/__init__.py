@@ -1,5 +1,6 @@
 from nonebot import get_plugin_config
 from nonebot.plugin import PluginMetadata
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Event
 
 from .config import Config
 
