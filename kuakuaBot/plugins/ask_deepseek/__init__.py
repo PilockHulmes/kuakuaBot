@@ -5,6 +5,7 @@ from nonebot import logger
 from nonebot.rule import to_me
 from nonebot.adapters import Message
 from nonebot.params import CommandArg
+from nonebot.rule import Rule
 
 
 # from nonebot.adapters.onebot.v11 import MessageEvent
@@ -12,7 +13,7 @@ from nonebot.adapters.onebot.v11 import PrivateMessageEvent, GroupMessageEvent
 
 from .config import Config
 from .prompt import send_message_v3_group, send_message_r1, send_message_v3_private
-from .utils import whitelist_groups
+
 
 __plugin_meta__ = PluginMetadata(
     name="ask_deepseek",
@@ -23,7 +24,14 @@ __plugin_meta__ = PluginMetadata(
 
 config = get_plugin_config(Config)
 
-ask = on_message(rule=to_me(), priority=10)
+whiltelist = [853041949, 1020882307, 244960293]
+def group_in_whitelist(event: Event):
+    if (session := event.get_session_id()).startswith("group_"):
+        group_id = session.split("_")[1]
+        return int(group_id) in whiltelist
+    return False
+
+ask = on_message(rule=Rule(group_in_whitelist) & to_me(), priority=10)
 
 @ask.handle()
 async def handle_function(event: GroupMessageEvent):
