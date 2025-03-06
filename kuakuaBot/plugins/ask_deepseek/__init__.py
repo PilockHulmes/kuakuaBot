@@ -9,7 +9,7 @@ from nonebot.rule import Rule
 
 
 # from nonebot.adapters.onebot.v11 import MessageEvent
-from nonebot.adapters.onebot.v11 import PrivateMessageEvent, GroupMessageEvent
+from nonebot.adapters.onebot.v11 import PrivateMessageEvent, GroupMessageEvent, Event
 
 from .config import Config
 from .prompt import send_message_v3_group, send_message_r1, send_message_v3_private

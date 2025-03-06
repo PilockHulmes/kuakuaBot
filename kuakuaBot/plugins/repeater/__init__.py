@@ -52,11 +52,12 @@ def repeater_interval(event: GroupMessageEvent):
 
 repeater = on_message(priority=10, rule=Rule(group_in_whitelist) & Rule(repeater_interval), block=False)
 
+repeated_messages = {}
 @repeater.handle()
-async def handle(event: GroupMessageEvent):    
+async def handle(event: GroupMessageEvent):
     messages = await chat_saver.getLatestMessagesForRepeater(event.group_id, message_count=5, duration_in_secods=repeat_interval)
-    # 一分钟说不到十条也就别花 token 检查了。先这么看看频率
-    if len(messages) < 5:
+    # 一分钟说不到几条也就别花 token 检查了。先这么看看频率
+    if len(messages) <= 3:
         logger.info("chat frequency too low, skip repeater")
         await repeater.finish()
     all_messages = ""
@@ -67,7 +68,7 @@ async def handle(event: GroupMessageEvent):
         timestamp = message["timestamp"]
         content = message["content"]
         all_messages += f"[消息{i}] [用户{sender_id}] [时间戳 {datetime.fromtimestamp(timestamp / 1000)}]: {content}\n"
-        message_map[f"消息{i}"] = content
+        message_map[f"消息{i}"] = message
     if all_messages.strip() == "":
         await repeater.finish()
     logger.info(all_messages)
@@ -78,7 +79,19 @@ async def handle(event: GroupMessageEvent):
         if analyze == "":
             continue
         score = int(analyze.split(" ")[0])
-        print(message, score, message_map[message], score >= 80)
+        print(message, score, message_map[message]["content"], score >= 80)
         if score >= 80:
-            await repeater.finish(message_map[message])
+            # 检查有没有复读过
+            if event.group_id not in repeated_messages:
+                repeated_messages[event.group_id] = []
+                await repeater.finish(message_map[message]["content"])
+            else:
+                if message_map[message]["msg_id"] in repeated_messages[event.group_id]:
+                    logger.info("skip repeating message since the message have already been repeated")
+                    await repeater.finish()
+                else:
+                    repeated_messages[event.group_id].append(message_map[message]["msg_id"])
+                    repeated_messages[event.group_id][-20:] # 只保留最近 20 条复读过的消息 id
+                    await repeater.finish(message_map[message]["content"])
+            
     await repeater.finish()
