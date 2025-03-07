@@ -15,7 +15,7 @@ require("group_chat_saver")
 from plugins.group_chat_saver.redis.chatsaver import chat_saver
 require("ask_deepseek")
 from plugins.ask_deepseek.prompt import send_repeater_messages_v3
-globals 
+
 __plugin_meta__ = PluginMetadata(
     name="repeater",
     description="",
@@ -33,7 +33,7 @@ def group_in_whitelist(event: Event):
     return False
 
 start = {}
-repeat_interval = 60
+repeat_interval = 6000
 # initial_wait_time = 10 * 60
 initial_wait_time = 0
 def repeater_interval(event: GroupMessageEvent):
