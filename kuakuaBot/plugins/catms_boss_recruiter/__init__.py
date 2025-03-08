@@ -12,6 +12,8 @@ from nonebot.adapters import Message
 require("group_chat_saver")
 from plugins.group_chat_saver.redis.chatsaver import chat_saver
 
+from .recruiter_redis import operator
+
 import re
 
 __plugin_meta__ = PluginMetadata(
@@ -44,10 +46,6 @@ recruiter_help_usage = """命令清单（随时可能变）
 2. 2025-03-08 09:52 @发布人2 Q3
 ...
 
-自顶命令：
-.赛黑自顶
-只对发车人生效，会把你发的车的时间更新到最新，在别人问互带车时就会排到最上面
-
 解散命令：
 .赛黑解散
 只对发车人生效，会把当前赛黑车解散
@@ -64,7 +62,7 @@ recruiter_help = on_command("招募板子", priority=15, block=True, rule=Rule(u
 bm_carry_recruit = on_command("赛黑互带", aliases=["塞黑互带"], priority=15, block=True, rule=Rule(user_in_whitelist))
 bm_carry_join = on_command("赛黑上车", aliases=["塞黑上车"], priority=15, block=True, rule=Rule(user_in_whitelist))
 bm_carry_exit = on_command("赛黑下车", aliases=["塞黑下车"], priority=15, block=True, rule=Rule(user_in_whitelist))
-bm_carry_bump = on_command("赛黑自顶", aliases=["塞黑自顶"], priority=15, block=True, rule=Rule(user_in_whitelist))
+# bm_carry_bump = on_command("赛黑自顶", aliases=["塞黑自顶"], priority=15, block=True, rule=Rule(user_in_whitelist))
 bm_carry_dismiss = on_command("赛黑解散", aliases=["塞黑解散"], priority=15, block=True, rule=Rule(user_in_whitelist))
 
 @recruiter_help.handle()
@@ -72,13 +70,30 @@ async def handle(event:GroupMessageEvent):
     await recruiter_help.finish(recruiter_help_usage)
 
 recruit_slots_regex = r"[Qq]([12345])"
-@bm_carry_recruit()
+@bm_carry_recruit.handle()
 async def handle(event:GroupMessageEvent, args: Message = CommandArg()):
     if slots := args.extract_plain_text():
-        if not re.search(recruit_slots_regex, slots):
+        matcher = re.search(recruit_slots_regex, slots)
+        if matcher:
+            slots = int(matcher.group(1))
+            (is_succeed, message) = await operator.create(event.group_id, event.user_id, slots)
+            bm_carry_recruit.finish(message)
+        else:
             bm_carry_recruit.finish("人数格式不对，支持 Q1 Q2 Q3 Q4 Q5")
-        
     else:
         bm_carry_recruit.finish("请输入招募人数，例如 .赛黑互带 Q2")
-        
-    
+
+recruit_at_regex = r"\[CQ:at,qq=([0-9]+)\]"
+@bm_carry_join.handle()
+async def handle(event:GroupMessageEvent, args: Message = CommandArg()):
+    if at_info := args.extract_plain_text():
+        matcher = re.search(recruit_at_regex, at_info)
+        if matcher:
+            target_qq = int(matcher.group(1))
+            (is_succeed, message) = await operator.join(event.group_id, event.user_id, target_qq)
+            bm_carry_join.finish(message)
+        else:
+            bm_carry_join.finish("请在命令中 at 车头，例如 .赛黑上车 @狐狸皮")
+    else:
+        bm_carry_join.finish("请在命令中 at 车头，例如 .赛黑上车 @狐狸皮")
+
