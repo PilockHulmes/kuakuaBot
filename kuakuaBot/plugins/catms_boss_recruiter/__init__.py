@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from nonebot.adapters.onebot.v11 import Bot as OneBot
 from nonebot.params import CommandArg
 from nonebot.adapters import Message
+from nonebot.rule import Rule
 
 require("group_chat_saver")
 from plugins.group_chat_saver.redis.chatsaver import chat_saver
@@ -28,8 +29,8 @@ __plugin_meta__ = PluginMetadata(
 config = get_plugin_config(Config)
 
 whiltelist = [
-    602682031,
-    1020882307,
+    # 602682031,
+    # 1020882307,
 ]
 def group_in_whitelist(event: Event):
     if (session := event.get_session_id()).startswith("group_"):
@@ -71,14 +72,14 @@ recruiter_help_usage = """命令清单（随时可能变）
 以上所有“赛黑”打成“塞黑”也有用
 """
 recruiter_help = on_command("赛黑互带帮助", priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_board = on_command("赛黑互带车", aliases=["塞黑互带车"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_recruit = on_command("赛黑互带", aliases=["塞黑互带"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_join = on_command("赛黑互带上车", aliases=["塞黑互带上车"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_leave = on_command("赛黑互带下车", aliases=["塞黑互带下车"], priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_board = on_command("赛黑互带车", aliases=set(["塞黑互带车"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_recruit = on_command("赛黑互带", aliases=set(["塞黑互带"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_join = on_command("赛黑互带上车", aliases=set(["塞黑互带上车"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_leave = on_command("赛黑互带下车", aliases=set(["塞黑互带下车"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 # bm_carry_bump = on_command("赛黑自顶", aliases=["塞黑自顶"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_dismiss = on_command("赛黑互带解散", aliases=["塞黑互带解散"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_dismiss_quiet = on_command("赛黑互带悄悄解散", aliases=["塞黑互带悄悄解散"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_carry_check = on_command("赛黑互带验车", aliases=["赛黑互带验车"], priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_dismiss = on_command("赛黑互带解散", aliases=set(["塞黑互带解散"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_dismiss_quiet = on_command("赛黑互带悄悄解散", aliases=set(["塞黑互带悄悄解散"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_check = on_command("赛黑互带验车", aliases=set(["赛黑互带验车"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 
 @recruiter_help.handle()
 async def handle1(event:GroupMessageEvent):

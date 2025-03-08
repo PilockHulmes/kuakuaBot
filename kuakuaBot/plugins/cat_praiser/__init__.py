@@ -26,8 +26,8 @@ __plugin_meta__ = PluginMetadata(
 config = get_plugin_config(Config)
 
 whiltelist = [
-    (853041949, 28369507), # 喵群，喵呜
-    (1020882307, 392206976), # 夸夸测试群，皮
+    # (853041949, 28369507), # 喵群，喵呜
+    # (1020882307, 392206976), # 夸夸测试群，皮
 ]
 def user_in_whitelist(event: GroupMessageEvent):
     for (group_id, user_id) in whiltelist:

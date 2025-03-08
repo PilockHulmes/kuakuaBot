@@ -6,8 +6,11 @@ from nonebot import logger, on_command, on_regex, require
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Event
 from redis.asyncio import Redis
 from nonebot.adapters.onebot.v11 import Bot as OneBot
-
+from nonebot.rule import Rule
 import re
+
+require("group_chat_saver")
+from plugins.group_chat_saver.redis.chatsaver import chat_saver
 
 __plugin_meta__ = PluginMetadata(
     name="catms_boss_notifier",
@@ -34,8 +37,13 @@ list_remove = on_command("希拉车删我", priority=15, block=True, rule=Rule(g
 
 bm_match_regex = r"(10|(?<!\d)[1-9])(赛|塞)黑"
 bm_notifier = on_regex(bm_match_regex, priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_list_add = on_command("赛黑车加我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(group_in_whitelist))
-bm_list_remove = on_command("赛黑车删我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_list_add = on_command("赛黑车加我", aliases=set(["塞黑车加我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_list_remove = on_command("赛黑车删我", aliases=set(["塞黑车删我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+
+bm_carry_notifier = on_regex(r"[赛|塞]黑互带[Qq][1-5]", priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_list_add = on_command("赛黑互带加我", aliases=set(["塞黑互带加我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_carry_list_remove = on_command("赛黑互带删我", aliases=set(["塞黑互带删我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+
 
 import time
 private_msg_whitelist = [
@@ -116,3 +124,35 @@ async def bmHandleRemove(event:GroupMessageEvent):
         await notifier.finish("不在赛黑车提醒队列中，无需删除")
     await chat_saver.removeQQ(event.group_id, event.user_id, bm_title)
     await notifier.finish("赛黑车删除成功")
+
+bm_carry_title = "bm_carry_saved_id"
+@bm_carry_notifier.handle()
+async def bmCarryHandle(event:GroupMessageEvent, bot:OneBot):
+    group_id = event.group_id
+    qqs = await chat_saver.listQQ(group_id, bm_carry_title)
+    print(qqs)
+    at_messages = ""
+    for qq in qqs:
+        at_messages += f" [CQ:at,qq={qq}]"
+    
+    send_message = f"""大佬们开赛黑互带车了，at 一下想上车的群友们，刷屏见谅哈。 
+{at_messages}
+上车命令： .赛黑互带加我
+下车命令： .赛黑互带删我 """
+    if group_id in whiltelist:
+        await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
+    await notifier.finish()
+
+@bm_carry_list_add.handle()
+async def bmCarryHandleAdd(event: GroupMessageEvent):
+    if await chat_saver.hasQQ(event.group_id, event.user_id, bm_carry_title):
+        await notifier.finish("已在赛黑互带车提醒队列中，无需添加。需要下车请用 .赛黑互带删我")
+    await chat_saver.addQQ(event.group_id, event.user_id, bm_carry_title)
+    await notifier.finish("赛黑互带车添加成功。需要下车请用 .赛黑互带删我")
+
+@bm_carry_list_remove.handle()
+async def bmCarryHandleRemove(event:GroupMessageEvent):
+    if not await chat_saver.hasQQ(event.group_id, event.user_id, bm_carry_title):
+        await notifier.finish("不在赛黑互带车提醒队列中，无需删除")
+    await chat_saver.removeQQ(event.group_id, event.user_id, bm_carry_title)
+    await notifier.finish("赛黑互带车删除成功")
