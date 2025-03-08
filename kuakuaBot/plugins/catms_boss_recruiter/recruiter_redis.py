@@ -13,13 +13,15 @@ BM_RECRUIT_TIMELINE = "qq_group:{group_id}:bm_recruit:timeline"
 BM_RECRUIT_JOINED = "qq_group:{group_id}:bm_recruit:joined"
 
 class RecuriterRedis():
-    async def create(self, group_id, qq, slots):
+    async def create(self, group_id, qq, slots, nickname):
         info = {
             "recruit_id": qq,
             "group_id": group_id,
             "members": [qq],
-            "timeline": time.time() * 1000,
+            "members_nickname": [nickname],
+            "timeline": time.time(),
             "slots": slots,
+            "head_nickname": nickname,
         }
         
         async with redis_client.pipeline(transaction=True) as pipe:
@@ -84,19 +86,20 @@ class RecuriterRedis():
             await pipe.execute()
             return json.loads(info_str)
 
-    async def join(self, group_id, qq, target):
+    async def join(self, group_id, qq, target, nickname):
         async with redis_client.pipeline(transaction=True) as pipe:
             try:
                 source_key = BM_RECRUIT.format(group_id=group_id)
                 pipe.watch(source_key)
                 if not await pipe.hexists(source_key, target):
-                    return (False, "车不存在，参加失败")
+                    return (-1, "车不存在，参加失败")
                 info = json.loads(
                     await pipe.hget(source_key, target)
                 )
                 if info["slots"] <= 0:
-                    return (False, "车满，参加失败")
+                    return (-1, "车满，参加失败")
                 info["members"].append(qq)
+                info["members_nickname"].append(nickname)
                 info["slots"] -= 1
                 await pipe.hset(
                     name=source_key,
@@ -109,11 +112,11 @@ class RecuriterRedis():
                     value=target, # 参加了哪辆车
                 )
                 await pipe.execute()
-                return (True, "上车成功")
+                return (info["slots"], "上车成功")
             except redis.WatchError:
-                return (False, "并发问题，上车失败，请重试")
+                return (-1, "并发问题，上车失败，请重试")
 
-    async def leave(self, group_id, qq):
+    async def leave(self, group_id, qq, nickname):
         async with redis_client.pipeline(transaction=True) as pipe:
             try:
                 source_key = BM_RECRUIT.format(group_id=group_id)
@@ -136,6 +139,8 @@ class RecuriterRedis():
                 else:
                     info = json.loads(info_str)
                     info["members"].remove(qq)
+                    if nickname in info["members_nickname"]:
+                        info["members_nickname"].remove(nickname)
                     info["slots"] += 1
                     await pipe.hset(
                         name=source_key,

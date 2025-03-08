@@ -28,14 +28,14 @@ def group_in_whitelist(event: Event):
         return int(group_id) in whiltelist
     return False
 match_regex = r"(10|(?<!\d)[1-9])([Xx][Ll]|希拉|希腊|老女人|大眼墩子[Xx][Ll])"
-notifier = on_regex(match_regex, priority=15, block=True, rule=Rule(user_in_whitelist))
-list_add = on_command("希拉车加我", priority=15, block=True, rule=Rule(user_in_whitelist))
-list_remove = on_command("希拉车删我", priority=15, block=True, rule=Rule(user_in_whitelist))
+notifier = on_regex(match_regex, priority=15, block=True, rule=Rule(group_in_whitelist))
+list_add = on_command("希拉车加我", priority=15, block=True, rule=Rule(group_in_whitelist))
+list_remove = on_command("希拉车删我", priority=15, block=True, rule=Rule(group_in_whitelist))
 
 bm_match_regex = r"(10|(?<!\d)[1-9])(赛|塞)黑"
-bm_notifier = on_regex(bm_match_regex, priority=15, block=True, rule=Rule(user_in_whitelist))
-bm_list_add = on_command("赛黑车加我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(user_in_whitelist))
-bm_list_remove = on_command("赛黑车删我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(user_in_whitelist))
+bm_notifier = on_regex(bm_match_regex, priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_list_add = on_command("赛黑车加我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(group_in_whitelist))
+bm_list_remove = on_command("赛黑车删我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(group_in_whitelist))
 
 import time
 private_msg_whitelist = [
