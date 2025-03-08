@@ -7,9 +7,6 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, Event
 from redis.asyncio import Redis
 from nonebot.adapters.onebot.v11 import Bot as OneBot
 
-require("group_chat_saver")
-from plugins.group_chat_saver.redis.chatsaver import chat_saver
-
 import re
 
 __plugin_meta__ = PluginMetadata(
@@ -20,7 +17,6 @@ __plugin_meta__ = PluginMetadata(
 )
 
 config = get_plugin_config(Config)
-redis = Redis.from_url("redis://localhost:6379/0", decode_responses=True)
 
 whiltelist = [
     602682031,
@@ -32,14 +28,14 @@ def group_in_whitelist(event: Event):
         return int(group_id) in whiltelist
     return False
 match_regex = r"(10|(?<!\d)[1-9])([Xx][Ll]|希拉|希腊|老女人|大眼墩子[Xx][Ll])"
-notifier = on_regex(match_regex, priority=15, block=True)
-list_add = on_command("希拉车加我", priority=15, block=True)
-list_remove = on_command("希拉车删我", priority=15, block=True)
+notifier = on_regex(match_regex, priority=15, block=True, rule=Rule(user_in_whitelist))
+list_add = on_command("希拉车加我", priority=15, block=True, rule=Rule(user_in_whitelist))
+list_remove = on_command("希拉车删我", priority=15, block=True, rule=Rule(user_in_whitelist))
 
 bm_match_regex = r"(10|(?<!\d)[1-9])(赛|塞)黑"
-bm_notifier = on_regex(bm_match_regex, priority=15, block=True)
-bm_list_add = on_command("赛黑车加我", priority=15, block=True)
-bm_list_remove = on_command("赛黑车删我", priority=15, block=True)
+bm_notifier = on_regex(bm_match_regex, priority=15, block=True, rule=Rule(user_in_whitelist))
+bm_list_add = on_command("赛黑车加我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(user_in_whitelist))
+bm_list_remove = on_command("赛黑车删我", aliases=["塞黑车加我"], priority=15, block=True, rule=Rule(user_in_whitelist))
 
 import time
 private_msg_whitelist = [
