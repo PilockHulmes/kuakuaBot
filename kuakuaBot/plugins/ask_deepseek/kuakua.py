@@ -49,6 +49,7 @@ def generate_advanced_praise(target_id: str, chat_context: str) -> str:
 4. 避免重复近期已夸赞过的方向
 5. 输出为单条消息，控制在15-30字
 6. 若根据最近发言无法生成有趣的夸赞，那么生成空字符串即可
+7. 若发言人说的话带抱怨的意思，或者情绪比较低落，那么不应该夸赞而是应该安慰
 
 三、示例参考：
 游戏场景："刚看了喵呜呜的走位教学，这蛇皮步比我本命英雄还流畅！"
@@ -58,13 +59,13 @@ def generate_advanced_praise(target_id: str, chat_context: str) -> str:
 请生成针对[用户{target_id}]的夸赞："""
     return prompt
 
-async def miaowu_kuakua(history_messages):
+async def miaowu_kuakua(qq, history_messages):
     payload = {
     "model": "deepseek-chat",
     "messages": [
         {
             "role": "user",
-            "content": generate_advanced_praise()
+            "content": generate_advanced_praise(qq, history_messages)
             }
         ],
         "stream": False,

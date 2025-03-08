@@ -9,6 +9,7 @@ from nonebot import logger
 from .config import Config
 
 import time
+from datetime import datetime
 
 require("group_chat_saver")
 from plugins.group_chat_saver.redis.chatsaver import chat_saver
@@ -24,33 +25,55 @@ __plugin_meta__ = PluginMetadata(
 
 config = get_plugin_config(Config)
 
-whiltelist = [853041949]
-miaowuwu = 28369507
+whiltelist = [
+    (853041949, 28369507), # 喵群，喵呜
+    (1020882307, 392206976), # 夸夸测试群，皮
+]
 def user_in_whitelist(event: GroupMessageEvent):
-    return (event.group_id in whiltelist) and (event.user_id == miaowuwu)
+    for (group_id, user_id) in whiltelist:
+        if event.group_id == group_id and event.user_id == user_id:
+            return True
+    return False
 
 start = time.time()
 praise_interval = 180 # 先暂定三分钟一次
 def praiser_interval(event: GroupMessageEvent):
+    global start
     if time.time() - start > praise_interval:
         return True
     else:
         return False
 
-praiser = on_message(priority=10, rule=Rule(user_in_whitelist) & Rule(praiser_interval), block=False)
+praiser = on_message(priority=10, rule=Rule(user_in_whitelist), block=False)
 
-message_countdown_cooldown = 10 # 每隔几句话夸一次，避免夸的太频繁
-message_countdown = 0
+message_countdown_cooldown = 1 # 每隔几句话夸一次，避免夸的太频繁
+message_countdown = {}
+praise_interval = 5
+praise_last_time = {}
 @praiser.handle()
 async def handle(event: GroupMessageEvent):
-    if message_countdown > 0: # 避免复读太多次，所以
-        message_countdown -= 1
-        await praiser.finish()
+    global praise_last_time
+    global message_countdown
     
-    messages = await chat_saver.getLatestMessagesForRepeater(event.group_id, message_count=10, duration_in_secods=60)
-    if messages[-1]["sender_id"] != miaowuwu: # 如果最后一条不是喵呜，说明还没来得及储存，再取一次。这里先不用循环了避免出问题死循环
+    mix_id = (event.group_id, event.user_id)
+    # 初始化一下，第一次满足条件的都不会夸
+    if mix_id not in praise_last_time:
+        praise_last_time[mix_id] = time.time()
+    if mix_id not in message_countdown:
+        message_countdown[mix_id] = message_countdown_cooldown
+
+    # 避免复读太多次，所以用时间和次数限制一下
+    if message_countdown[mix_id] > 0: 
+        message_countdown[mix_id] -= 1
+        await praiser.finish()
+    if time.time() - praise_last_time[mix_id] < praise_interval:
+        await praiser.finish()
+
+    messages = await chat_saver.getLatestMessagesForRepeater(event.group_id, message_count=10, duration_in_secods=300)
+    print(messages, event.group_id)
+    if len(messages) == 0 or messages[-1]["sender_id"] != event.user_id: # 如果最后一条不是白名单人员，说明还没来得及储存，再取一次。这里先不用循环了避免出问题死循环
         time.sleep(0.5)
-        messages = await chat_saver.getLatestMessagesForRepeater(event.group_id, message_count=10, duration_in_secods=60)
+        messages = await chat_saver.getLatestMessagesForRepeater(event.group_id, message_count=10, duration_in_secods=300)
     all_messages = ""
     message_map = {}
     for i in range(len(messages)):
@@ -61,11 +84,11 @@ async def handle(event: GroupMessageEvent):
         all_messages += f"[消息{i}] [用户{sender_id}] [时间戳 {datetime.fromtimestamp(timestamp / 1000)}]: {content}\n"
         message_map[f"消息{i}"] = message
     if all_messages.strip() == "":
-        await repeater.finish()
+        await praiser.finish()
     logger.info(all_messages)
-    kuakua_message = miaowu_kuakua(all_messages)
+    kuakua_message = await miaowu_kuakua(event.user_id, all_messages)
     if kuakua_message == "":
         await praiser.finish()
-    start = time.time()
-    message_countdown = message_countdown_cooldown
-    praiser.finish() # TODO: 改成发 kuakua_message
+    praise_last_time[mix_id] = time.time()
+    message_countdown[mix_id] = message_countdown_cooldown
+    await praiser.finish() # TODO: 改成发 kuakua_message

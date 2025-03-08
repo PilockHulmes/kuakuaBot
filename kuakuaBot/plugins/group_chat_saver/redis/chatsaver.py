@@ -64,11 +64,9 @@ class ChatSaver():
             name=f"qq_group:{group_id}:timeline",
             min=start_timestamp,
             max=end_timestamp,
-            start=-message_count, # 取最近的消息
-            num=message_count
         )
         async with self.redis.pipeline(transaction=True) as pipe:
-            for msg_id in msg_ids:
+            for msg_id in msg_ids[-message_count:]:
                 pipe.hget(f"qq_group:{group_id}:msg_data", msg_id)
             msgs = await pipe.execute()
         return [json.loads(msg) for msg in msgs]
