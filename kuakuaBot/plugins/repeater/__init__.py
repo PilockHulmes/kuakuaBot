@@ -25,7 +25,11 @@ __plugin_meta__ = PluginMetadata(
 
 config = get_plugin_config(Config)
 
-whiltelist = [853041949, 1020882307, 244960293]
+whiltelist = [
+    # 853041949, 
+    # 1020882307, 
+    # 244960293,
+]
 def group_in_whitelist(event: Event):
     if (session := event.get_session_id()).startswith("group_"):
         group_id = session.split("_")[1]
