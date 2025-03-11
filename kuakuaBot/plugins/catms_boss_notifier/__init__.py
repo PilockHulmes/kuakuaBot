@@ -45,6 +45,9 @@ bm_carry_asking = on_regex(r"([赛|塞]黑)互带(?![Qq][1-5])(?!(加我|删我)
 bm_carry_list_add = on_command("赛黑互带加我", aliases=set(["塞黑互带加我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 bm_carry_list_remove = on_command("赛黑互带删我", aliases=set(["塞黑互带删我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 
+exc_carry_notifier = on_regex(r"[eE][xX]狗[Qq][1-5]", priority=15, block=True, rule=Rule(group_in_whitelist))
+exc_carry_list_add = on_command("ex狗加我", aliases=set(["EX狗加我","eX狗加我","Ex狗加我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+exc_carry_list_remove = on_command("ex狗删我", aliases=set(["EX狗删我","eX狗删我","Ex狗删我"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 
 import time
 private_msg_whitelist = [
@@ -161,7 +164,7 @@ async def bmCarryHandleAdd(event: GroupMessageEvent):
     total = await chat_saver.listQQ(event.group_id, bm_carry_title)
     message = "赛黑互带车添加成功。需要下车请用 .赛黑互带删我"
     if len(total) >= 6:
-        message += f"\n已经有 {len(total)} 人想赛黑互带，可以考虑用自行开足。有需要可以用 赛黑互带Q1 at 互带组中的人"
+        message += f"\n已经有 {len(total)} 人想赛黑互带，可以考虑用自行开组。有需要可以用 赛黑互带Q5 at 互带组中的人"
     await notifier.finish(message)
 
 @bm_carry_list_remove.handle()
@@ -170,3 +173,38 @@ async def bmCarryHandleRemove(event:GroupMessageEvent):
         await notifier.finish("不在赛黑互带车提醒队列中，无需删除")
     await chat_saver.removeQQ(event.group_id, event.user_id, bm_carry_title)
     await notifier.finish("赛黑互带车删除成功")
+    
+exc_carry_title = "exc_carry_saved_id"
+@exc_carry_notifier.handle()
+async def excCarryHandle(event:GroupMessageEvent, bot:OneBot):
+    group_id = event.group_id
+    qqs = await chat_saver.listQQ(group_id, exc_carry_title)
+    at_messages = ""
+    for qq in qqs:
+        at_messages += f" [CQ:at,qq={qq}]"
+    
+    send_message = f"""大佬们开EX狗了，at 一下想上车的群友们，刷屏见谅哈。 
+{at_messages}
+上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我 .ex狗加我
+下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我 .ex狗删我"""
+    if group_id in whiltelist:
+        await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
+    await notifier.finish()
+
+@exc_carry_list_add.handle()
+async def excCarryHandleAdd(event: GroupMessageEvent):
+    if await chat_saver.hasQQ(event.group_id, event.user_id, exc_carry_title):
+        await notifier.finish("已在EX狗提醒队列中，无需添加。需要下车请用 .ex狗删我")
+    await chat_saver.addQQ(event.group_id, event.user_id, exc_carry_title)
+    total = await chat_saver.listQQ(event.group_id, exc_carry_title)
+    message = "EX狗添加成功。需要下车请用 .ex狗删我"
+    if len(total) >= 6:
+        message += f"\n已经有 {len(total)} 人想打EX狗，可以考虑用自行开组。有需要可以用 EX狗Q5 at 互带组中的人"
+    await notifier.finish(message)
+
+@exc_carry_list_remove.handle()
+async def excCarryHandleRemove(event:GroupMessageEvent):
+    if not await chat_saver.hasQQ(event.group_id, event.user_id, exc_carry_title):
+        await notifier.finish("不在EX狗提醒队列中，无需删除")
+    await chat_saver.removeQQ(event.group_id, event.user_id, exc_carry_title)
+    await notifier.finish("EX狗删除成功")
