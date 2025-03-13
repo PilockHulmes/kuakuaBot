@@ -3,3 +3,4 @@ httpx
 redis
 nonebug
 pydantic==1.10.19
+pydub

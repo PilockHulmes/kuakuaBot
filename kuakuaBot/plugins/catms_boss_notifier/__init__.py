@@ -52,8 +52,12 @@ exc_carry_list_remove = on_command("ex狗删我", aliases=set(["EX狗删我","eX
 import time
 private_msg_whitelist = [
     392206976,
-    # 528886033,
+    528886033,
 ]
+
+commands_tip = """上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我 .ex狗加我
+下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我 .ex狗删我"""
+
 @notifier.handle()
 async def handler(event:GroupMessageEvent, bot:OneBot):
     m = event.message.extract_plain_text()
@@ -66,9 +70,9 @@ async def handler(event:GroupMessageEvent, bot:OneBot):
     for qq in qqs:
         at_messages += f" [CQ:at,qq={qq}]"
     
-    send_message = f"""大佬发希拉车了，at 一下想上车的群友们，刷屏见谅哈。 {at_messages}
-上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我
-下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我"""
+    send_message = f"""大佬发希拉车了，at 一下想上车的群友们，刷屏见谅哈。
+{at_messages}
+{commands_tip}"""
     
     if group_id in whiltelist:
         await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
@@ -104,9 +108,9 @@ async def bmHandle(event:GroupMessageEvent, bot:OneBot):
     for qq in qqs:
         at_messages += f" [CQ:at,qq={qq}]"
     
-    send_message = f"""大佬发赛黑车了，at 一下想上车的群友们，刷屏见谅哈。 {at_messages}
-上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我
-下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我"""
+    send_message = f"""大佬发赛黑车了，at 一下想上车的群友们，刷屏见谅哈。 
+{at_messages}
+{commands_tip}"""
     if group_id in whiltelist:
         await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
         for qq in private_msg_whitelist:
@@ -139,8 +143,7 @@ async def bmCarryHandle(event:GroupMessageEvent, bot:OneBot):
     
     send_message = f"""大佬们开赛黑互带车了，at 一下想上车的群友们，刷屏见谅哈。 
 {at_messages}
-上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我
-下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我"""
+{commands_tip}"""
     if group_id in whiltelist:
         await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
     await notifier.finish()
@@ -185,8 +188,7 @@ async def excCarryHandle(event:GroupMessageEvent, bot:OneBot):
     
     send_message = f"""大佬们开EX狗了，at 一下想上车的群友们，刷屏见谅哈。 
 {at_messages}
-上车命令： .希拉车加我 .赛黑车加我 .赛黑互带加我 .ex狗加我
-下车命令： .希拉车删我 .赛黑车删我 .赛黑互带删我 .ex狗删我"""
+{commands_tip}"""
     if group_id in whiltelist:
         await bot.send_group_msg(group_id= group_id, message = send_message, auto_escape = False)
     await notifier.finish()
