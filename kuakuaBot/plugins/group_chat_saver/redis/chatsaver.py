@@ -6,7 +6,7 @@ class ChatSaver():
     def __init__(self):
         self.redis = Redis.from_url("redis://localhost:6379/0", decode_responses=True)
     
-    async def addQQ(self, group_id, qq, title = "saved_id"):
+    async def addQQ(self, group_id, qq, title = "saved_id"): 
         async with self.redis.pipeline(transaction=True) as pipe:
             await pipe.hset(
                 name=f"qq_group:{group_id}:{title}",
@@ -29,7 +29,20 @@ class ChatSaver():
     async def listQQ(self, group_id, title = "saved_id"):
         keys = await self.redis.hkeys(f"qq_group:{group_id}:{title}")
         return [int(qq) for qq in keys]
+
+    async def saveQQInfo(self, group_id, qq, info, title = "saved_id"):
+        await self.redis.hset(
+            name=f"qq_group:{group_id}:{title}:info",
+            key=qq,
+            value=info
+        )
     
+    async def getQQInfo(self, group_id, qq, title = "saved_id"):
+        return await self.redis.hget(
+            name=f"qq_group:{group_id}:{title}:info",
+            key=qq,
+        )
+
     async def storeMessage(self, group_id, sender_id, content, message_type="text"):
         # 生成唯一消息ID
         timestamp = int(time.time() * 1000)
