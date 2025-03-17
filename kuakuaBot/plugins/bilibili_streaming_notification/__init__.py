@@ -36,7 +36,7 @@ __plugin_meta__ = PluginMetadata(
 config = get_plugin_config(Config)
 
 
-group_whitelist = [1020882307, 853041949, 244960293]
+group_whitelist = [1020882307, 853041949, 244960293,1047606702]
 def group_in_whitelist(event: GroupMessageEvent):
     return event.group_id in group_whitelist
 
@@ -82,7 +82,7 @@ async def _(event: GroupMessageEvent, args: Message = CommandArg()):
         await add_person.finish(room_info["msg"])
     else:
         await add_streaming(event.group_id, uid, saved_title)
-        await add_person.finish(f"关注成功，若要取关请用 .关注主播 {uid}")
+        await add_person.finish(f"关注成功，若要取关请用 .取关主播 {uid}")
 
 @remove_person.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg()):
@@ -160,10 +160,10 @@ async def poll_steaming_condition():
                 continue
             if uid in streaming_on[group_id] and streaming_on[group_id][uid]:
                 continue
-            if diff_seconds > 60:
+            if diff_seconds > 120:
                 continue
             streaming_on[group_id][uid] = True
-            img = MessageSegment.image(room_info["cover_from_user"])
+            img = MessageSegment.image(room_info["cover_from_user"], timeout=30)
             room_id = room_info["room_id"]
             texts = MessageSegment.text(f"{await getNameByUID(uid)}的直播间已开播，地址 http://live.bilibili.com/{room_id}")
             await bot.call_api("send_group_msg", group_id=group_id, message = img + texts)
