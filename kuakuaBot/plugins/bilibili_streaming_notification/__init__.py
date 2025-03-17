@@ -9,6 +9,7 @@ from nonebot.adapters.onebot.v11 import PrivateMessageEvent, GroupMessageEvent, 
 import httpx
 import json
 from datetime import datetime
+import brotli
 
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
@@ -48,6 +49,7 @@ add_room = on_command("关注直播间", priority=15, block=True, rule=Rule(grou
 remove_room = on_command("取关直播间", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
 
 streaming_api_base = "https://api.live.bilibili.com/room/v1/Room/get_info"
+streaming_up_info_base = "https://api.live.bilibili.com/live_user/v1/Master/info"
 saved_title = "polling_rooms"
 
 async def getRoomInfo(room_id):
@@ -98,6 +100,24 @@ def calculate_time_difference(date_str):
     total_seconds = abs(total_seconds)  # 取绝对值计算时间差
     return (is_past, int(total_seconds))
 
+streaming_name = {}
+async def getNameByUID(uid: int):
+    if uid in streaming_name:
+        return streaming_name[uid]
+    async with httpx.AsyncClient(timeout=30) as client:
+        url = f"{streaming_up_info_base}?uid={uid}"
+        response = await client.request("GET", url=url,headers={
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip,deflate,br",
+            "Connection": "keep-alive",
+            "User-Agent": "PostmanRunime/7.43.2",
+        })
+        response_obj = json.loads(response.text)
+        if response_obj["code"] != 0:
+            return ""
+        streaming_name[uid] = response_obj["data"]["info"]["uname"]
+        return response_obj["data"]["info"]["uname"]
+
 streaming_on = {}
 @scheduler.scheduled_job("cron", second=1, misfire_grace_time=5) # 每隔 20 秒检查一次
 async def poll_steaming_condition():
@@ -110,16 +130,15 @@ async def poll_steaming_condition():
         room_ids = await list_streaming(group_id, saved_title)
         for room_id in room_ids:
             room_info = await getRoomInfo(room_id)
-            
-            # 没有该直播间则跳过
-            if room_info["code"] != 0 or room_info["msg"] != "ok":
+            if room_info["code"] != 0 or room_info["msg"] != "ok":# 没有该直播间则跳过
                 continue
-
+            uid = room_info["data"]["uid"]
+            
             streaming_time_str = room_info["data"]["live_time"]
             # 若直播间未开播，则判断是否需要做下播通知，并跳过
             if streaming_time_str.startswith("0000-00-00"): # 特殊字符串，中间的空格和键盘上的不太一样，总之复制黏贴一个过来就行
                 if room_id in streaming_on[group_id] and streaming_on[group_id][room_id]:
-                    await bot.call_api("send_group_msg", group_id=group_id, message = f"{room_id} 已下播")
+                    await bot.call_api("send_group_msg", group_id=group_id, message = f"{await getNameByUID(uid)}已下播")
                     streaming_on[group_id][room_id] = False
                 continue
             
@@ -134,7 +153,7 @@ async def poll_steaming_condition():
                 continue
             streaming_on[group_id][room_id] = True
             img = MessageSegment.image(room_info["data"]["user_cover"])
-            texts = MessageSegment.text(f" 直播间 {room_id} 已开播，地址 http://live.bilibili.com/{room_id}")
+            texts = MessageSegment.text(f"{await getNameByUID(uid)}的直播间已开播，地址 http://live.bilibili.com/{room_id}")
             await bot.call_api("send_group_msg", group_id=group_id, message = img + texts)
     (_, poll_total_seconds) = calculate_time_difference(poll_start.strftime("%Y-%m-%d %H:%M:%S"))
     logger.info(f"poll costs {poll_total_seconds}s")

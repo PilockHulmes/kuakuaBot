@@ -5,3 +5,4 @@ nonebug
 pydantic==1.10.19
 pydub
 Pillow
+brotli # httpx 会自动用？
