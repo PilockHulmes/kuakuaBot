@@ -45,50 +45,58 @@ def qq_in_whitelist(event: GroupMessageEvent):
     return event.user_id in qq_whitelist
 
 
-add_room = on_command("关注直播间", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
-remove_room = on_command("取关直播间", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
+add_person = on_command("关注主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
+remove_person = on_command("取关主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
 
 streaming_api_base = "https://api.live.bilibili.com/room/v1/Room/get_info"
+streaming_batch_get_info_base = 'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids' # POST 
 streaming_up_info_base = "https://api.live.bilibili.com/live_user/v1/Master/info"
-saved_title = "polling_rooms"
+saved_title = "polling_uids"
 
-async def getRoomInfo(room_id):
+async def getStreamingRoomsByUIDs(uids):
     async with httpx.AsyncClient(timeout=30) as client:
-        url = f"{streaming_api_base}?room_id={room_id}"
-        response = await client.request("GET", url=url,headers={
+        url = f"{streaming_batch_get_info_base}"
+        headers = {
             "Accept": "*/*",
             "Accept-Encoding": "gzip,deflate,br",
             "Connection": "keep-alive",
             "User-Agent": "PostmanRunime/7.43.2",
-        })
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "uids": uids
+        }
+        response = await client.request("POST", url=url,json=payload,headers=headers)
         response_obj = json.loads(response.text)
         return response_obj
 
-@add_room.handle()
+@add_person.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg()):
-    room_id = args.extract_plain_text().strip()
-    if room_id is None or not room_id.isnumeric():
-        await add_room.finish("请输入格式正确的直播间地址，例如 .关注直播间 123")
-    room_info = await getRoomInfo(room_id)
-    if room_info["code"] != 0 or room_info["msg"] != "ok":
-        await add_room.finish(room_info["msg"])
+    uid = args.extract_plain_text().strip()
+    if await has_streaming(event.group_id, uid, saved_title):
+        await add_person.finish("已经关注了该主播")
+    if uid is None or not uid.isnumeric():
+        await add_person.finish("请输入格式正确的UID，例如 .关注主播 123")
+    room_info = await getStreamingRoomsByUIDs([int(uid)])
+    if room_info["code"] != 0 or room_info["msg"] != "success":
+        await add_person.finish(room_info["msg"])
     else:
-        await add_streaming(event.group_id, room_id, saved_title)
-        await add_room.finish(f"关注成功，若要取关请用 .取关直播间 {room_id}")
+        await add_streaming(event.group_id, uid, saved_title)
+        await add_person.finish(f"关注成功，若要取关请用 .关注主播 {uid}")
 
-@remove_room.handle()
+@remove_person.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg()):
     room_id = args.extract_plain_text().strip()
     if room_id is None or not room_id.isnumeric():
-        await remove_room.finish("请输入格式正确的直播间地址，例如 .关注直播间 123")
+        await remove_person.finish("请输入格式正确的UID，例如 .取关主播 123")
     if not await has_streaming(event.group_id, room_id, saved_title):
-        await remove_room.finish("取关失败，未关注该直播间")
+        await remove_person.finish("取关失败，未关注该主播")
     await remove_streaming(event.group_id, room_id, saved_title)
-    await remove_room.finish("取关成功")
+    await remove_person.finish("取关成功")
 
-def calculate_time_difference(date_str):
+def calculate_time_difference(timestamp):
     # 解析日期字符串
-    target_time = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    target_time = datetime.fromtimestamp(int(timestamp))
     # 获取当前时间
     current_time = datetime.now()
     # 计算时间差
@@ -119,41 +127,45 @@ async def getNameByUID(uid: int):
         return response_obj["data"]["info"]["uname"]
 
 streaming_on = {}
-@scheduler.scheduled_job("cron", second=1, misfire_grace_time=5) # 每隔 20 秒检查一次
+@scheduler.scheduled_job("cron", second="*/20", misfire_grace_time=5) # 每隔 20 秒检查一次
 async def poll_steaming_condition():
     logger.info("Streaming polling...")
     bot: Bot = get_bot()
-    poll_start = datetime.now()
+    poll_start = datetime.now().timestamp()
     for group_id in group_whitelist:
         if group_id not in streaming_on:
             streaming_on[group_id] = {}
-        room_ids = await list_streaming(group_id, saved_title)
-        for room_id in room_ids:
-            room_info = await getRoomInfo(room_id)
-            if room_info["code"] != 0 or room_info["msg"] != "ok":# 没有该直播间则跳过
+        uids = await list_streaming(group_id, saved_title)
+        if uids is None or len(uids) == 0:
+            continue
+        room_infos = await getStreamingRoomsByUIDs(uids)
+        if room_infos["code"] != 0: # 没有成功获取直播间信息则跳过
+            continue
+        for uid in uids:
+            if str(uid) not in room_infos["data"]:
                 continue
-            uid = room_info["data"]["uid"]
-            
-            streaming_time_str = room_info["data"]["live_time"]
+            room_info = room_infos["data"][str(uid)]
+            live_timestamp = room_info["live_time"]
             # 若直播间未开播，则判断是否需要做下播通知，并跳过
-            if streaming_time_str.startswith("0000-00-00"): # 特殊字符串，中间的空格和键盘上的不太一样，总之复制黏贴一个过来就行
-                if room_id in streaming_on[group_id] and streaming_on[group_id][room_id]:
+            if live_timestamp == 0: #
+                if uid in streaming_on[group_id] and streaming_on[group_id][uid]:
                     await bot.call_api("send_group_msg", group_id=group_id, message = f"{await getNameByUID(uid)}已下播")
-                    streaming_on[group_id][room_id] = False
+                    streaming_on[group_id][uid] = False
                 continue
             
             # 若已开播，则只为一分钟内开播且没有通知过的直播间做开播通知。
-            (is_past, diff_seconds) = calculate_time_difference(streaming_time_str)
+            (is_past, diff_seconds) = calculate_time_difference(live_timestamp)
             if not is_past:
-                logger.warning(f"获取到开播时间晚于当前时间的直播: {room_id}")
+                logger.warning(f"获取到开播时间晚于当前时间的直播: {uid}")
                 continue
-            if room_id in streaming_on[group_id] and streaming_on[group_id][room_id]:
+            if uid in streaming_on[group_id] and streaming_on[group_id][uid]:
                 continue
-            if diff_seconds > 180:
+            if diff_seconds > 60:
                 continue
-            streaming_on[group_id][room_id] = True
-            img = MessageSegment.image(room_info["data"]["user_cover"])
+            streaming_on[group_id][uid] = True
+            img = MessageSegment.image(room_info["cover_from_user"])
+            room_id = room_info["room_id"]
             texts = MessageSegment.text(f"{await getNameByUID(uid)}的直播间已开播，地址 http://live.bilibili.com/{room_id}")
             await bot.call_api("send_group_msg", group_id=group_id, message = img + texts)
-    (_, poll_total_seconds) = calculate_time_difference(poll_start.strftime("%Y-%m-%d %H:%M:%S"))
+    (_, poll_total_seconds) = calculate_time_difference(poll_start)
     logger.info(f"poll costs {poll_total_seconds}s")
