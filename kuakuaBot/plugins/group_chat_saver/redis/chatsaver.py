@@ -14,6 +14,16 @@ class ChatSaver():
                 value=""
             )
             await pipe.execute()
+
+    async def addQQs(self, group_id, qqs, title = "saved_id"):
+        async with self.redis.pipeline(transaction=True) as pipe:
+            for qq in qqs:
+                await pipe.hset(
+                    name=f"qq_group:{group_id}:{title}",
+                    key=qq,
+                    value=""
+                )
+            await pipe.execute()
     
     async def removeQQ(self, group_id, qq, title= "saved_id"):
         async with self.redis.pipeline(transaction=True) as pipe:
