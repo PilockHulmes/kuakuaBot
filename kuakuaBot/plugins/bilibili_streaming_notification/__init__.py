@@ -47,6 +47,7 @@ def qq_in_whitelist(event: GroupMessageEvent):
 
 add_person = on_command("关注主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
 remove_person = on_command("取关主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
+streaming_status = on_command("直播情况", aliases=set(["有谁在直播"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 
 streaming_api_base = "https://api.live.bilibili.com/room/v1/Room/get_info"
 streaming_batch_get_info_base = 'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids' # POST 
@@ -66,7 +67,7 @@ async def getStreamingRoomsByUIDs(uids):
         payload = {
             "uids": uids
         }
-        response = await client.request("POST", url=url,json=payload,headers=headers)
+        response = await client.request("POST", url=url,json=payload,headers=headers, timeout=30)
         response_obj = json.loads(response.text)
         return response_obj
 
@@ -94,6 +95,30 @@ async def _(event: GroupMessageEvent, args: Message = CommandArg()):
     await remove_streaming(event.group_id, room_id, saved_title)
     await remove_person.finish("取关成功")
 
+@streaming_status.handle()
+async def _(event: GroupMessageEvent):
+    uids = await list_streaming(event.group_id, saved_title)
+    if len(uids) == 0:
+        await streaming_status.finish("没有关注任何主播，请用 .关注主播 UID 来进行关注")
+    room_infos = await getStreamingRoomsByUIDs(uids)
+    if room_infos["code"] != 0: # 没有成功获取直播间信息则跳过
+        await streaming_status.finish(f"获取直播信息失败，失败原因: {room_infos["msg"]}")
+    streaming_rooms = []
+    for uid in uids:
+        if str(uid) not in room_infos["data"]:
+            continue
+        room_info = room_infos["data"][str(uid)]
+        live_timestamp = room_info["live_time"]
+        if int(live_timestamp) > 0:
+            room_id = room_info["room_id"]
+            streaming_rooms.append(f"{await getNameByUID(uid)} http://live.bilibili.com/{room_id}")
+    if len(streaming_rooms) == 0:
+        await streaming_status.finish(f"目前无人直播")
+    else:
+        response = "以下主播正在直播:\n"
+        response += "\n".join(streaming_rooms)
+        await streaming_status.finish(response)
+
 def calculate_time_difference(timestamp):
     # 解析日期字符串
     target_time = datetime.fromtimestamp(int(timestamp))
@@ -119,7 +144,7 @@ async def getNameByUID(uid: int):
             "Accept-Encoding": "gzip,deflate,br",
             "Connection": "keep-alive",
             "User-Agent": "PostmanRunime/7.43.2",
-        })
+        }, timeout=30)
         response_obj = json.loads(response.text)
         if response_obj["code"] != 0:
             return ""
