@@ -34,6 +34,7 @@ marriage = on_command("结婚", priority=15, rule=Rule(group_in_whitelist))
 
 @marriage.handle()
 async def _(event: GroupMessageEvent):
+    print(event.message)
     image_url = ""
     for seg in event.message:
         if seg.type == "image":
@@ -41,6 +42,10 @@ async def _(event: GroupMessageEvent):
             if url:
                 image_url = url
         if seg.type == "face":
+            url = seg.data.get("url")
+            if url:
+                image_url = url
+        if seg.type == "mface":
             url = seg.data.get("url")
             if url:
                 image_url = url
