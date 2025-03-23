@@ -62,7 +62,8 @@ async def fetchQQForGroup(group_id):
     members = await bot.call_api("get_group_member_list", group_id=group_id, cache=False)
     member_qqs = [str(m["user_id"]) for m in members]
     print(member_qqs)
-    await chat_saver.saveQQInfo(valhalla_mocked_group, group_id, ",".join(member_qqs), valhalla_groups_title)
+    if len(member_qqs) > 0:
+        await chat_saver.saveQQInfo(valhalla_mocked_group, group_id, ",".join(member_qqs), valhalla_groups_title)
 
 @scheduler.scheduled_job("cron", day="*", misfire_grace_time=5) # 每天同步一次 QQ 号
 async def fetchQQForGroups():
