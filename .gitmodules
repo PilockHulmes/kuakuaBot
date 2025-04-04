@@ -1,0 +1,3 @@
+[submodule "kuakuaBot/repo_plugins/nonebot_plugin_what2eat"]
+	path = kuakuaBot/repo_plugins/nonebot_plugin_what2eat
+	url = https://github.com/PilockHulmes/nonebot_plugin_what2eat.git
