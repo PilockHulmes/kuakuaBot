@@ -3,4 +3,6 @@ docker run -d \
   --name kuakuabot-redis \
   -v /Volumes/Samsung_T5/workspace/redis/working_directory:/data \
   -p 6379:6379 \
-  group-chat-saves  
+  group-chat-saves \
+  --bind 0.0.0.0 \
+  --protected-mode no
