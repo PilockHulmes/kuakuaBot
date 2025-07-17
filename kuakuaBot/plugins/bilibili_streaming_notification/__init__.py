@@ -47,7 +47,7 @@ def qq_in_whitelist(event: GroupMessageEvent):
 
 add_person = on_command("关注主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
 remove_person = on_command("取关主播", priority=15, block=True, rule=Rule(group_in_whitelist) & Rule(qq_in_whitelist))
-streaming_status = on_command("直播情况", aliases=set(["有谁在直播"]), priority=15, block=True, rule=Rule(group_in_whitelist))
+streaming_status = on_command("直播情况", aliases=set(["有谁在直播","直播"]), priority=15, block=True, rule=Rule(group_in_whitelist))
 
 streaming_api_base = "https://api.live.bilibili.com/room/v1/Room/get_info"
 streaming_batch_get_info_base = 'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids' # POST 
