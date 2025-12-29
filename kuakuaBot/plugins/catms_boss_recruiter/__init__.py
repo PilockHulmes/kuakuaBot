@@ -134,19 +134,21 @@ async def handle4(event:GroupMessageEvent):
     (succeed, message) = await operator.leave(event.group_id, event.user_id, event.sender.nickname)
     bm_carry_leave.finish(message)
 
-@bm_carry_check.handle()
-async def handle5(event:GroupMessageEvent, args:Message = CommandArg()):
-    info = await operator.getJoined(event.group_id, event.user_id)
-    cmd = args.extract_plain_text()
-    if cmd.strip() == "出发" and info["slots"] == 0:
-        at_members = buildAt(info["members"])
-        bm_carry_check.finish(f"车头是 {info["head_nickname"]}，人满可以出发 {at_members}")
-    elif (cmd.strip() == "qq" or cmd.strip() == "QQ"):
-        members = ", ".join(info["members"])
-        bm_carry_check.finish(f"车头是 {info["recruit_id"]}，车内人数 {6 - int(info["slots"])}/6，车上人员是 {members}")
-    else:
-        members = ", ".join(info["members_nickname"])
-        bm_carry_check.finish(f"车头是 {info["head_nickname"]}，车内人数 {6 - int(info["slots"])}/6，车上人员是 {members}")
+# @bm_carry_check.handle()
+# async def handle5(event:GroupMessageEvent, args:Message = CommandArg()):
+#     info = await operator.getJoined(event.group_id, event.user_id)
+#     cmd = args.extract_plain_text()
+#     if cmd.strip() == "出发" and info["slots"] == 0:
+#         at_members = buildAt(info["members"])
+#         h = info["head_nickname"]
+#         bm_carry_check.finish(f"车头是 {h}，人满可以出发 {at_members}")
+#     elif (cmd.strip() == "qq" or cmd.strip() == "QQ"):
+#         members = ", ".join(info["members"])
+#         h = info["recruit_id"]
+#         bm_carry_check.finish(f"车头是 {h}，车内人数 {6 - int(info["slots"])}/6，车上人员是 {members}")
+#     else:
+#         members = ", ".join(info["members_nickname"])
+#         bm_carry_check.finish(f"车头是 {info["head_nickname"]}，车内人数 {6 - int(info["slots"])}/6，车上人员是 {members}")
 
 @bm_carry_dismiss.handle()
 async def handle6(event:GroupMessageEvent):
@@ -172,4 +174,5 @@ async def handle8(event: GroupMessageEvent):
     infos = await operator.list(event.group_id)
     message = "赛黑互带车：\n"
     for info in infos:
-        message += f"- {datetime.fromtimestamp(info["timeline"])} {info["head_nickname"]} {6 - int(info["slots"])}/6"
+        t = datetime.fromtimestamp(info["timeline"]) + " " + info["head_nickname"] + " " + 6 - int(info["slots"])
+        message += f"- {t}/6"

@@ -95,8 +95,9 @@ async def handle_smega_message(data: str):
             await bot.send_group_msg(group_id=group, message = send_message, auto_escape = False)
     return
 
-driver = get_driver()
-@driver.on_bot_connect
+# uncomment to make it work
+# driver = get_driver()
+# @driver.on_bot_connect
 async def bot_connect():
     try:
         await listen_redis_channel()
@@ -139,7 +140,8 @@ async def _(event: GroupMessageEvent, bot: OneBot):
 @list_keyword.handle()
 async def _(event: GroupMessageEvent, bot: OneBot):
     keywords = await message_filter.get_user_keywords(event.group_id, event.user_id)
-    message = f"[CQ:at,qq={event.user_id}] 已关注以下关键字：{" ".join(keywords)}"
+    joied_keywords = " ".join(keywords)
+    message = f"[CQ:at,qq={event.user_id}] 已关注以下关键字：{joied_keywords}"
     await bot.send_group_msg(group_id=event.group_id, message = message, auto_escape = False)
     await add_keyword.finish()
 

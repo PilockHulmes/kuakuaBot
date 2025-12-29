@@ -12,6 +12,7 @@ from datetime import datetime
 import time
 import random
 from pathlib import Path
+import base64
 
 from .config import Config
 
@@ -73,8 +74,12 @@ async def _(event: GroupMessageEvent):
     
     # 随机选择一张图片
     selected_image = random.choice(image_files)
+    with open(selected_image, "rb") as f:
+        img_data = f.read()
+        base64_str = base64.b64encode(img_data).decode()
        # 构建图片消息
-    image_msg = MessageSegment.image(selected_image)
+    # image_msg = MessageSegment.image(selected_image)
+    img_seg = MessageSegment.image(f"base64://{base64_str}", timeout=30)
     
     # 发送图片
-    await ha.finish(image_msg)
+    await ha.finish(img_seg)

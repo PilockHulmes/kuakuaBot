@@ -36,6 +36,7 @@ def qq_in_whitelist(event: GroupMessageEvent):
 
 watch_group = on_command("启用英灵殿", aliases=set(["valhalla", "瓦尔哈拉"]), priority=15, rule=Rule(qq_in_whitelist))
 unwatch_group = on_command("关闭英灵殿", priority=15, rule=Rule(qq_in_whitelist))
+count_group = on_command("英灵殿计数", priority=15, rule=Rule(qq_in_whitelist))
 
 valhalla_groups_title = "groups_enable_valhalla"
 valhalla_mocked_group = -1 
@@ -56,6 +57,14 @@ async def _(event: GroupMessageEvent):
         await watch_group.finish("未启用英灵殿，无需关闭")
     await chat_saver.removeQQ(valhalla_mocked_group, event.group_id, valhalla_groups_title)
     await watch_group.finish("成功关闭英灵殿")
+
+@count_group.handle()
+async def _(event: GroupMessageEvent):
+    if not await chat_saver.hasQQ(valhalla_mocked_group, event.group_id, valhalla_groups_title):
+        await watch_group.finish("未启用英灵殿，无法看技术")
+    i = await chat_saver.getQQInfo(valhalla_mocked_group, event.group_id, valhalla_groups_title)
+    l = i.split(",")
+    await watch_group.finish("目前已记录" + str(len(l)) + "人")
 
 async def fetchQQForGroup(group_id):
     bot: Bot = get_bot()

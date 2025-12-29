@@ -36,7 +36,7 @@ __plugin_meta__ = PluginMetadata(
 config = get_plugin_config(Config)
 
 
-group_whitelist = [1020882307, 853041949, 244960293,1047606702]
+group_whitelist = [1020882307, 853041949, 244960293,1047606702, 457313650]
 def group_in_whitelist(event: GroupMessageEvent):
     return event.group_id in group_whitelist
 
@@ -102,7 +102,8 @@ async def _(event: GroupMessageEvent):
         await streaming_status.finish("没有关注任何主播，请用 .关注主播 UID 来进行关注")
     room_infos = await getStreamingRoomsByUIDs(uids)
     if room_infos["code"] != 0: # 没有成功获取直播间信息则跳过
-        await streaming_status.finish(f"获取直播信息失败，失败原因: {room_infos["msg"]}")
+        fail_info = room_infos["msg"]
+        await streaming_status.finish(f"获取直播信息失败，失败原因: {fail_info}")
     streaming_rooms = []
     for uid in uids:
         if str(uid) not in room_infos["data"]:
