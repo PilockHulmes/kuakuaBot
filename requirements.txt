@@ -5,6 +5,6 @@ redis
 nonebug
 pydantic==1.10.19
 pydub
-Pillow
+# Pillow
 brotli # httpx 会自动用？
 aiofiles
