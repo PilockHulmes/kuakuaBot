@@ -2,9 +2,9 @@
 塔罗牌占卜插件 - NoneBot 2 插件
 
 命令：
-- /塔罗 <问题>          → 默认三张牌阵占卜
-- /塔罗 <牌阵> <问题>   → 指定牌阵占卜
-- /tarot 同 /塔罗
+- .塔罗 <问题>          → 默认三张牌阵占卜
+- .塔罗 <牌阵> <问题>   → 指定牌阵占卜
+- .tarot 同 .塔罗
 """
 
 from nonebot import get_plugin_config
@@ -34,7 +34,7 @@ from .tarot_deck import (
 __plugin_meta__ = PluginMetadata(
     name="tarot",
     description="塔罗牌占卜插件 - 随机抽牌，AI 解读",
-    usage="发送 /塔罗 <问题> 进行占卜，/塔罗 <牌阵> <问题> 指定牌阵",
+    usage="发送 .塔罗 <问题> 进行占卜，.塔罗 <牌阵> <问题> 指定牌阵",
     config=Config,
 )
 
@@ -47,11 +47,8 @@ config = get_plugin_config(Config)
 whitelist = [853041949, 1020882307, 244960293]
 
 
-def group_in_whitelist(event: Event):
-    if (session := event.get_session_id()).startswith("group_"):
-        group_id = session.split("_")[1]
-        return int(group_id) in whitelist
-    return False
+def group_in_whitelist(event: GroupMessageEvent):
+    return event.group_id in whitelist
 
 
 # =============================================================================
@@ -83,8 +80,8 @@ async def handle_tarot(event: GroupMessageEvent, args: Message = CommandArg()):
         await tarot.finish(
             f"🔮 塔罗牌占卜\n\n"
             f"用法：\n"
-            f"  /塔罗 <问题>          → 默认三张牌阵\n"
-            f"  /塔罗 <牌阵> <问题>   → 指定牌阵\n\n"
+            f"  .塔罗 <问题>          → 默认三张牌阵\n"
+            f"  .塔罗 <牌阵> <问题>   → 指定牌阵\n\n"
             f"问题至少 {TOPIC_MIN_LENGTH} 个字符，最多 {TOPIC_MAX_LENGTH} 个字符。\n"
             f"支持的牌阵：{valid_spreads_str}"
         )
