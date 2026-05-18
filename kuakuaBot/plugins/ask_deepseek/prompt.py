@@ -14,11 +14,19 @@ async def send_message_v3_group(message):
         "model": "deepseek-chat",
         "messages": [
             {
-                "role": "user",
-                "content": f"""请问:
-{message}
-
+                "role": "system",
+                "content":f"""
+【角色沉浸要求】在你的思考过程（<think>标签内）中，请遵守以下规则：
+1. 请以角色第一人称进行内心独白，用括号包裹内心活动，例如"（心想：……）"或"(内心OS：……)"
+2. 用第一人称描写角色的内心感受，例如"我心想""我觉得""我暗自"等
+3. 思考内容应沉浸在角色中，通过内心独白分析剧情和规划回复
 请用纯文本格式返回，并且尽量把回复内容压缩到100字内，最多不超过200字。
+"""
+            },
+            {
+                "role": "user",
+                "content": f"""
+{message}
 """
             }
         ],
