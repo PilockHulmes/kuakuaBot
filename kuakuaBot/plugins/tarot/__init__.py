@@ -13,7 +13,7 @@ from nonebot import on_command
 from nonebot.rule import Rule
 from nonebot.adapters import Message
 from nonebot.params import CommandArg
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, Event
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Event, MessageSegment
 from nonebot import logger
 
 from .config import Config
@@ -65,7 +65,7 @@ tarot = on_command(
 
 
 @tarot.handle()
-async def handle_tarot(event: GroupMessageEvent, args: Message = CommandArg()):
+async def handle_tarot(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     raw_text = args.extract_plain_text().strip()
 
     # Step 1: 解析参数
@@ -109,11 +109,29 @@ async def handle_tarot(event: GroupMessageEvent, args: Message = CommandArg()):
         f"  {i+1}. {c['name']}（{c['orientation']}）"
         for i, c in enumerate(cards)
     )
-    await tarot.send(f"🔮 正在为「{topic}」占卜...\n\n【抽到的牌】\n{card_display}")
 
     # Step 6: 构建 prompt 并调用 AI
     prompt = build_tarot_prompt(topic, spread, cards)
     result = await call_deepseek_tarot(prompt)
 
-    # Step 7: 返回结果
-    await tarot.finish(f"🔮 塔罗解读结果：\n\n{result}")
+    # Step 7: 以转发消息形式返回结果，避免长文本刷屏
+    forward_content = (
+        f"🔮 塔罗占卜\n"
+        f"咨询主题：{topic}\n"
+        f"使用牌阵：{spread}\n\n"
+        f"【抽到的牌】\n{card_display}\n\n"
+        f"【解读结果】\n{result}"
+    )
+
+    await bot.call_api(
+        "send_group_forward_msg",
+        group_id=event.group_id,
+        messages=[
+            MessageSegment.node_custom(
+                int(bot.self_id),
+                "塔罗占卜结果",
+                forward_content,
+            )
+        ],
+    )
+    await tarot.finish()
