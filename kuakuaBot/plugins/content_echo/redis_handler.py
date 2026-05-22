@@ -51,5 +51,21 @@ class ContentEchoRedis:
     def __del__(self):
         self.redis.close()
 
+    # ------------------------------------------------------------------
+    # 开关状态（按群独立，持久化到 Redis）
+    # ------------------------------------------------------------------
+
+    async def is_enabled(self, group_id: int) -> bool:
+        """查询复读提示是否开启，默认开启"""
+        val = await self.redis.get(f"qq_group:{group_id}:echo_enabled")
+        return val is None or val == "1"
+
+    async def set_enabled(self, group_id: int, enabled: bool) -> None:
+        """设置复读提示开关状态"""
+        await self.redis.set(
+            f"qq_group:{group_id}:echo_enabled",
+            "1" if enabled else "0",
+        )
+
 
 content_echo_redis = ContentEchoRedis()

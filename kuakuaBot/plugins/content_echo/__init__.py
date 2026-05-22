@@ -17,7 +17,7 @@ from nonebot.adapters.onebot.v11 import (
     MessageSegment,
 )
 from nonebot.plugin import PluginMetadata
-from nonebot import on_message
+from nonebot import on_command, on_message
 from nonebot.rule import Rule
 
 from .config import Config
@@ -26,7 +26,7 @@ from .redis_handler import content_echo_redis
 __plugin_meta__ = PluginMetadata(
     name="content_echo",
     description="重复内容检测 - 检测群内重复的转发/图片/视频并发送图片",
-    usage="自动监听，无需手动触发",
+    usage="自动监听；发送「开启复读提示」「关闭复读提示」控制开关",
     config=Config,
 )
 
@@ -53,6 +53,45 @@ echo = on_message(
     rule=Rule(group_in_whitelist),
     block=False,
 )
+
+
+# =============================================================================
+# 开关命令
+# =============================================================================
+
+echo_on = on_command(
+    "开启复读提示",
+    priority=10,
+    block=True,
+    rule=Rule(group_in_whitelist),
+)
+
+echo_off = on_command(
+    "关闭复读提示",
+    priority=10,
+    block=True,
+    rule=Rule(group_in_whitelist),
+)
+
+
+@echo_on.handle()
+async def handle_echo_on(bot: Bot, event: GroupMessageEvent):
+    await content_echo_redis.set_enabled(event.group_id, True)
+    await bot.send_group_msg(
+        group_id=event.group_id,
+        message=MessageSegment.text("✅ 复读提示已开启"),
+    )
+    await echo_on.finish()
+
+
+@echo_off.handle()
+async def handle_echo_off(bot: Bot, event: GroupMessageEvent):
+    await content_echo_redis.set_enabled(event.group_id, False)
+    await bot.send_group_msg(
+        group_id=event.group_id,
+        message=MessageSegment.text("⏸️ 复读提示已关闭"),
+    )
+    await echo_off.finish()
 
 
 # =============================================================================
@@ -111,7 +150,12 @@ async def compute_checksum(event: GroupMessageEvent, bot: Bot) -> Optional[str]:
             if has_text:
                 continue
             # 只记录外部发来的图片（subtype=0），忽略收藏表情（subtype=1）
-            subtype = seg.data.get("subtype", "0")
+            # 兼容不同适配器的大小写：subtype / subType
+            subtype = str(
+                seg.data.get("subtype")
+                or seg.data.get("subType")
+                or "0"
+            )
             if subtype != "0":
                 continue
             file_md5 = seg.data.get("file", "")
@@ -182,6 +226,10 @@ def get_image_for_group(group_id: int) -> str:
 async def handle_content_echo(bot: Bot, event: GroupMessageEvent):
     group_id: int = event.group_id
     sender_id: int = event.user_id
+
+    # 0. 检查开关状态
+    if not await content_echo_redis.is_enabled(group_id):
+        await echo.finish()
 
     # 1. 每条消息都递增计数器
     counter = await content_echo_redis.increment_counter(group_id)
